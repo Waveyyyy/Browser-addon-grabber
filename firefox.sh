@@ -38,3 +38,21 @@ locate_firefox_dir() {
 
 firefox_dir=$(locate_firefox_dir)
 
+get_default_profile() {
+   profiles_ini="$firefox_dir/profiles.ini"
+   if [ ! -f "$profiles_ini" ]; then
+      exit
+   fi
+
+   # regex from https://askubuntu.com/a/354907
+   # should also work on MacOS
+   if [[ $(grep '\[Profile[0-9{2}]\]' "$profiles_ini") ]]; then
+      profile_path=$(grep -E '\[Profile|^Path|^Default' "$profiles_ini" | grep -1 '^Default=1' | grep '^Path' | cut -c6-)
+   else
+      profile_path=$(grep 'Path=' "$profiles_ini" | sed 's/^Path=//')
+   fi
+
+   echo "$firefox_dir/$profile_path"
+}
+
+default_profile_path=$(get_default_profile)
