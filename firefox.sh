@@ -24,3 +24,17 @@ fi
 
 #### Template End
 
+locate_firefox_dir() {
+   # possible firefox directory locations on Linux
+   # TODO: add possible locations on MacOS
+   possible_locations=("$HOME/snap/firefox/common/.mozilla/firefox" "$HOME/.mozilla/firefox" "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" )
+   for i in "${possible_locations[@]}"; do
+      if [ -d "$i" ]; then # if directory exists
+         local result="$i" # result is the directory that exists
+      fi
+   done
+   echo "$result" # "return" the directory that exists
+}
+
+firefox_dir=$(locate_firefox_dir)
+
