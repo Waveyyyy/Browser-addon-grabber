@@ -56,3 +56,12 @@ get_default_profile() {
 }
 
 default_profile_path=$(get_default_profile)
+addons_json_path="$default_profile_path/addons.json"
+
+echo "$addons_json_path"
+
+extract_addonName_addonVer() {
+   if [ ! -f "$addons_json_path" ]; then
+      exit
+   fi
+}
