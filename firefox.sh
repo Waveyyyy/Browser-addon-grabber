@@ -96,12 +96,44 @@ extract_addons() {
 unformatted_addons=$(extract_addons)
 
 format_addons_as_json() {
+   # Uses sed to remove the trailing comma at the end of the version k+v pairs
+   # e.g
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   # becomes
+   #   "name":"addon_name",
+   #   "version":"version_number"
    rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
 
+   # there are lines containing two dashes "--" between the the version of one
+   # addon and the name of the next, this sed command replaces these with
+   # a closing bracket a comma and an opening bracket.
+   # e.g 
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   #   --
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   # becomes
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   #   },
+   #   {
+   #   "name":"addon_name",
+   #   "version":"version_number"
    dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
 
+   # possibly redundant, however formats the k+v pairs and brackets surrounding them
+   # to match the formatting that inputting valid json to jq returns.
+   # - adds 6 spaces before lines beginning with double quotes
+   # - adds 4 spaces before lines beginning with curly braces
+   # - adds 1 space after colons
    fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
 
+   # adds other necessary brackets, keys, etc. to make the output fully valid json
+   # - add curly braces to encapsulate the json data
+   # - add "addons" key and square brace to open list where the individual addon
+   #   objects live
    make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
 
    echo $make_valid_json_and_fmt
