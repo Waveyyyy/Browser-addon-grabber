@@ -81,7 +81,7 @@ extract_addons() {
    # search for all json k+v pairs with a key containing "name" or "version"
    # in the "addons.json" file. By searching until the separating comma after a 
    # match
-   local all_name_and_version_keys=$(grep -Po '"name":.*?[^\\]",|"version":.*?[^\\]",' ~/snap/firefox/common/.mozilla/firefox/n412qyv8.default/addons.json)
+   local all_name_and_version_keys=$(grep -Po '"name":.*?[^\\]",|"version":.*?[^\\]",' $addons_json_path)
    # this returns the names of the addons, alongside the version. Consequentually,
    # this also returns the names of the authors. To remediate this, grep can 
    # provide negative context to a match (x lines before the match). Since 
