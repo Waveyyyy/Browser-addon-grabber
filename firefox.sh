@@ -72,10 +72,39 @@ get_default_profile() {
 default_profile_path=$(get_default_profile)
 addons_json_path="$default_profile_path/addons.json"
 
-echo "$addons_json_path"
-
-extract_addonName_addonVer() {
+extract_addons() {
+   # check if addons.json exists
    if [ ! -f "$addons_json_path" ]; then
       exit
    fi
+
+   # search for all json k+v pairs with a key containing "name" or "version"
+   # in the "addons.json" file. By searching until the separating comma after a 
+   # match
+   all_name_and_version_keys=$(grep -Po '"name":.*?[^\\]",|"version":.*?[^\\]",' ~/snap/firefox/common/.mozilla/firefox/n412qyv8.default/addons.json)
+   # this returns the names of the addons, alongside the version. Consequentually,
+   # this also returns the names of the authors. To remediate this, grep can 
+   # provide negative context to a match (x lines before the match). Since 
+   # the version is between the name of the addon and the names of the authors,
+   # we can grep a second time for version k+v pairs and provide the previous line
+   # (the name of the addon) as additional context.
+   addonName_addonVer=$(echo "$all_name_and_version_keys" | grep -P -B 1 '"version":.*?[^\\]",')
+
+   echo "$addonName_addonVer"
 }
+
+unformatted_addons=$(extract_addons)
+
+format_addons_as_json() {
+   rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
+
+   dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
+
+   fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
+
+   make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
+
+   echo $make_valid_json_and_fmt
+}
+
+echo $(format_addons_as_json)
