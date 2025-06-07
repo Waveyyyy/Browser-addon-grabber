@@ -27,7 +27,7 @@ fi
 locate_firefox_dir() {
    # possible firefox directory locations on Linux
    # TODO: add possible locations on MacOS
-   possible_locations=("$HOME/snap/firefox/common/.mozilla/firefox" "$HOME/.mozilla/firefox" "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" )
+   local possible_locations=("$HOME/snap/firefox/common/.mozilla/firefox" "$HOME/.mozilla/firefox" "$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" )
    for i in "${possible_locations[@]}"; do
       if [ -d "$i" ]; then # if directory exists
          local result="$i" # result is the directory that exists
@@ -39,7 +39,7 @@ locate_firefox_dir() {
 firefox_dir=$(locate_firefox_dir)
 
 get_default_profile() {
-   profiles_ini="$firefox_dir/profiles.ini"
+   local profiles_ini="$firefox_dir/profiles.ini"
    # check if the profiles_ini file exists
    if [ ! -f "$profiles_ini" ]; then
       exit
@@ -59,11 +59,11 @@ get_default_profile() {
       # directory containing the profile.
       # `cut -c6-` selects the text from the 6th character to the end of the 
       # string, the 6th character is the first character of the folder name
-      profile_path=$(grep -E '\[Profile|^Path|^Default' "$profiles_ini" | grep -1 '^Default=1' | grep '^Path' | cut -c6-)
+      local profile_path=$(grep -E '\[Profile|^Path|^Default' "$profiles_ini" | grep -1 '^Default=1' | grep '^Path' | cut -c6-)
    else
       # if there is only one profile then a simple grep for Path will work
       # this sed command removes 'Path=' and leaves the profile directory name
-      profile_path=$(grep 'Path=' "$profiles_ini" | sed 's/^Path=//')
+      local profile_path=$(grep 'Path=' "$profiles_ini" | sed 's/^Path=//')
    fi
 
    echo "$firefox_dir/$profile_path"
@@ -81,14 +81,14 @@ extract_addons() {
    # search for all json k+v pairs with a key containing "name" or "version"
    # in the "addons.json" file. By searching until the separating comma after a 
    # match
-   all_name_and_version_keys=$(grep -Po '"name":.*?[^\\]",|"version":.*?[^\\]",' ~/snap/firefox/common/.mozilla/firefox/n412qyv8.default/addons.json)
+   local all_name_and_version_keys=$(grep -Po '"name":.*?[^\\]",|"version":.*?[^\\]",' ~/snap/firefox/common/.mozilla/firefox/n412qyv8.default/addons.json)
    # this returns the names of the addons, alongside the version. Consequentually,
    # this also returns the names of the authors. To remediate this, grep can 
    # provide negative context to a match (x lines before the match). Since 
    # the version is between the name of the addon and the names of the authors,
    # we can grep a second time for version k+v pairs and provide the previous line
    # (the name of the addon) as additional context.
-   addonName_addonVer=$(echo "$all_name_and_version_keys" | grep -P -B 1 '"version":.*?[^\\]",')
+   local addonName_addonVer=$(echo "$all_name_and_version_keys" | grep -P -B 1 '"version":.*?[^\\]",')
 
    echo "$addonName_addonVer"
 }
@@ -103,7 +103,7 @@ format_addons_as_json() {
    # becomes
    #   "name":"addon_name",
    #   "version":"version_number"
-   rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
+   local rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
 
    # there are lines containing two dashes "--" between the the version of one
    # addon and the name of the next, this sed command replaces these with
@@ -121,20 +121,20 @@ format_addons_as_json() {
    #   {
    #   "name":"addon_name",
    #   "version":"version_number"
-   dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
+   local dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
 
    # possibly redundant, however formats the k+v pairs and brackets surrounding them
    # to match the formatting that inputting valid json to jq returns.
    # - adds 6 spaces before lines beginning with double quotes
    # - adds 4 spaces before lines beginning with curly braces
    # - adds 1 space after colons
-   fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
+   local fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
 
    # adds other necessary brackets, keys, etc. to make the output fully valid json
    # - add curly braces to encapsulate the json data
    # - add "addons" key and square brace to open list where the individual addon
    #   objects live
-   make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
+   local make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
 
    echo $make_valid_json_and_fmt
 }
