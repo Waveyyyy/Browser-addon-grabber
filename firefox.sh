@@ -40,15 +40,29 @@ firefox_dir=$(locate_firefox_dir)
 
 get_default_profile() {
    profiles_ini="$firefox_dir/profiles.ini"
+   # check if the profiles_ini file exists
    if [ ! -f "$profiles_ini" ]; then
       exit
    fi
 
    # regex from https://askubuntu.com/a/354907
    # should also work on MacOS
-   if [[ $(grep '\[Profile[0-9{2}]\]' "$profiles_ini") ]]; then
+   if [[ $(grep '\[Profile[^0]\]' "$profiles_ini") ]]; then
+      # First select the three lines containing "Profile, Path, Default"
+      #
+      # grep -1 adds one extra line of context AROUND the match (in this case 
+      # the line before Default=1 contains Path and the line after is EMPTY)
+      #
+      # then single out the line containing ^Path.
+      #
+      # The line containing Path is 'Path=...' where ... is the name of the 
+      # directory containing the profile.
+      # `cut -c6-` selects the text from the 6th character to the end of the 
+      # string, the 6th character is the first character of the folder name
       profile_path=$(grep -E '\[Profile|^Path|^Default' "$profiles_ini" | grep -1 '^Default=1' | grep '^Path' | cut -c6-)
    else
+      # if there is only one profile then a simple grep for Path will work
+      # this sed command removes 'Path=' and leaves the profile directory name
       profile_path=$(grep 'Path=' "$profiles_ini" | sed 's/^Path=//')
    fi
 
