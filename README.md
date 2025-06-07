@@ -1,6 +1,6 @@
-# Browser extension list
+# Browser addon list
 
-Bash script which collates the browser extensions and versions installed.
+Bash script which collates the browser addons and versions installed.
 
 ## TODO
 1. Support major browsers:
