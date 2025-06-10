@@ -95,7 +95,7 @@ extract_addons() {
 
 unformatted_addons=$(extract_addons)
 
-format_addons_as_json() {
+# format_addon_as_json() {
    # Uses sed to remove the trailing comma at the end of the version k+v pairs
    # e.g
    #   "name":"addon_name",
@@ -103,12 +103,12 @@ format_addons_as_json() {
    # becomes
    #   "name":"addon_name",
    #   "version":"version_number"
-   local rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
-
+#    local rm_ver_trailing_comma=$(echo "$unformatted_addons" | sed -E 's/("version":.*["])(,)/\1/')
+#
    # there are lines containing two dashes "--" between the the version of one
    # addon and the name of the next, this sed command replaces these with
    # a closing bracket a comma and an opening bracket.
-   # e.g 
+   # e.g
    #   "name":"addon_name",
    #   "version":"version_number",
    #   --
@@ -121,22 +121,78 @@ format_addons_as_json() {
    #   {
    #   "name":"addon_name",
    #   "version":"version_number"
-   local dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
-
+#    local dash_replace=$(echo "$rm_ver_trailing_comma" | sed -E "s/--/},\n{/")
+#
    # possibly redundant, however formats the k+v pairs and brackets surrounding them
    # to match the formatting that inputting valid json to jq returns.
    # - adds 6 spaces before lines beginning with double quotes
    # - adds 4 spaces before lines beginning with curly braces
    # - adds 1 space after colons
-   local fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
-
+#    local fmt_addons=$(echo "$dash_replace" | sed -E 's/(^\")/      \1/' | sed -E 's/(^[{}])/    \1/' | sed -E 's/(:)/\1 /')
+#
    # adds other necessary brackets, keys, etc. to make the output fully valid json
    # - add curly braces to encapsulate the json data
    # - add "addons" key and square brace to open list where the individual addon
    #   objects live
-   local make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
+#    local make_valid_json_and_fmt=$(printf "%b%b%b" '{\n  "addons:": [\n    {\n' "$fmt_addons" '\n    }\n  ]\n}')
+#
+#    echo $make_valid_json_and_fmt
+# }
+#
+# echo $(format_addons_as_json)
 
-   echo $make_valid_json_and_fmt
+format_addons_as_csv() {
+
+   # there are lines containing two dashes "--" between the the version of one
+   # addon and the name of the next, this sed command replaces these with
+   # a closing bracket a comma and an opening bracket.
+   # e.g
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   #   --
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   # becomes
+   #   "name":"addon_name",
+   #   "version":"version_number",
+   #   },
+   #   {
+   #   "name":"addon_name",
+   #   "version":"version_number"
+   dash_replace=$(echo "$unformatted_addons" | sed -E "s/^--//")
+
+   # matches any line that consists only of a beginning (^) followed
+   # immediately by an end ($), 'd' deletes the match.
+   rm_empty_lines=$(echo "$dash_replace" | sed "/^$/d")
+
+   # joins each pair of lines (name and version) into a single line. 
+   # 'N' appends the next line of input into the pattern space,
+   # separated by a newline char.
+   # 's/\n/ /' then replaces that newline character with a space,
+   # merging the two lines.
+   # e.g.
+   #   "name":"uBlock Origin",
+   #   "version":"1.64.0",
+   # becomes
+   #   "name":"uBlock Origin", "version":"1.64.0",
+   sameline=$(echo "$rm_empty_lines" | sed 'N;s/\n/ /')
+
+   # removes "name" and "version" keys from each line leaving just the values
+   # two substitution operations are done in a single pass to clean up the line.
+   # e.g.
+   #   "name":"uBlock Origin", "version":"1.64.0",
+   # becomes
+   #   "uBlock Origin", "1.64.0",
+   rm_keys=$(echo "$sameline" | sed 's/"name"://; s/"version"://')
+
+   # removes the trailing comma from the end of each line,
+   # to create a valid CSV file.
+   # the sed pattern 's/,$//' finds a comma (,) that occurs at the very end of a
+   # line ($) and replaces it with nothing.
+   trailing_comma=$(echo "$rm_keys" | sed 's/,$//')
+
+   # add the name and version headers to make it a valid csv format
+   printf "name, version\n%b\n" "$trailing_comma"
 }
 
-echo $(format_addons_as_json)
+echo $(format_addons_as_csv)
